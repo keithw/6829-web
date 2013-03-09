@@ -52,8 +52,9 @@ EVENT: while ( <$gz> ) {
   if ( $new_last_packet_sent > $last_packet_sent )
   {
     $last_packet_sent = $new_last_packet_sent
-  } elsif ( $last_packet_sent - $new_last_packet_sent > 5 ) {
-    $badstats = $last_packet_sent - $new_last_packet_sent;
+  } elsif ( $last_packet_sent - $new_last_packet_sent > 10 ) {
+    my $newbad = $last_packet_sent - $new_last_packet_sent;
+    if ( $newbad > $badstats ) { $badstats = $newbad; }
   }
 }
 
