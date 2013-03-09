@@ -41,7 +41,7 @@ EVENT: while ( <$gz> ) {
   }
 
   my $new_last_packet_sent = $ms - $ms_old;
-  die unless ( $new_last_packet_sent >= $last_packet_sent - 50 );
+#  die unless ( $new_last_packet_sent >= $last_packet_sent - 50 );
   # rounding can screw this up a little
   $last_packet_sent = $new_last_packet_sent if ( $new_last_packet_sent > $last_packet_sent );
 }
