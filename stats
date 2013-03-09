@@ -66,7 +66,7 @@ my $temp_filename = rand() . '-' . $$ . '-' . $html_name;
 open TEMP, ">", $temp_filename or die "$!";
 
 if ( $badstats ) {
-  print TEMP "Warning: scheduling delay of $badstats ms observed. Are you using a medium EC2 instance or better?<br>\n";
+  print TEMP "<strong>Warning: scheduling jitter of $badstats ms observed. Are you using a medium EC2 instance or better?</strong><br>\n";
 }
 
 print TEMP "<table>";
