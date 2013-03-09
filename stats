@@ -1,0 +1,68 @@
+#!/usr/bin/perl -w
+
+use strict;
+use IO::Uncompress::Gunzip;
+
+my ( $filename ) = @ARGV;
+
+my $gz = new IO::Uncompress::Gunzip $filename or die;
+
+my $last_ms = 0;
+
+my $time = 0;
+my $last_packet_sent = 0;
+my $capacity_sum = 0;
+my $used_sum = 0;
+my @pts;
+
+EVENT: while ( <$gz> ) {
+  chomp;
+
+  my ( $direction, $ms, $event, $field1, $field2 ) = split /\s+/, $_;
+  die "Bad direction $direction" unless $direction eq "downlink";
+  die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
+
+  die "nonmonotonic timestamps" unless $ms >= $last_ms;
+  $last_ms = $ms;
+
+  if ( $event eq "delivery" ) {
+    my $bits = $field2 * 8;
+    $used_sum += $bits;
+    $capacity_sum += $bits;
+  } elsif ( $event eq "underflow" ) {
+    my $bits = $field1 * 8;
+    $capacity_sum += $bits;
+    next EVENT;
+  }
+
+  my $ms_old = $field1;
+
+  while ( $time < $ms ) {
+    my $age = $time - $last_packet_sent;
+    my $secs = $time * 1.e-3;
+    push @pts, $age;
+    $time++;
+  }
+
+  my $new_last_packet_sent = $ms - $ms_old;
+  die unless ( $new_last_packet_sent >= $last_packet_sent );
+  $last_packet_sent = $new_last_packet_sent;
+}
+
+@pts = sort { $b <=> $a } @pts;
+my $ninefive = $pts[ 0.05 * scalar @pts ];
+my $avg_throughput = 1.e-3 * $used_sum / $last_packet_sent;
+my $avg_capacity = 1.e-3 * $capacity_sum / $last_packet_sent;
+
+print "<table>";
+printf "<tr><td>log(throughput/delay) score:</td><td></td><td><b>%0.2f</b></td></tr>\n", log( $avg_throughput / $ninefive );
+print "<tr><td colspan=3><hr></td></tr>\n";
+
+print "<tr><td>Delay (95th percentile):</td><td> </td><td><b>$ninefive ms</b></td></tr>\n";
+
+printf "<tr><td>Protocol throughput:</td><td></td><td><b>%0.2f Mbps</b></td></tr>\n", $avg_throughput;
+print "<tr><td colspan=3><hr></td></tr>\n";
+printf "<tr><td>Network capacity:</td><td></td><td>%0.2f Mbps</td></tr>\n", $avg_capacity;
+printf "<tr><td>Utilization:</td><td></td><td>%0.1f%%</td></tr>\n", 100 * $avg_throughput / $avg_capacity;
+
+print "</table>\n";
