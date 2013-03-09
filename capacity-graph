@@ -33,6 +33,7 @@ while ( <$gz> ) {
   }
 
   die "nonmonotonic timestamps" unless $ms >= $last_ms;
+  $last_ms = $ms;
 
   my $new_slice = int( $ms / $MS_PER_SLICE );
 
@@ -55,6 +56,7 @@ print GNUPLOT <<END;
 set title "Throughput"
 set xlabel "time (s)"
 set ylabel "Mbps"
+set ytics format "% 6.0f"
 set style fill solid 0.4 border
 set terminal svg size 1024,560 fixed  fname 'Arial'  fsize 12 rounded solid
 set output "$temp_filename"

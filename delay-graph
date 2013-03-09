@@ -1,0 +1,74 @@
+#!/usr/bin/perl -w
+
+use strict;
+use IO::Uncompress::Gunzip;
+use File::Temp qw{tempdir tempfile};
+
+my ( $filename, $svg_name ) = @ARGV;
+
+my $gz = new IO::Uncompress::Gunzip $filename or die;
+
+my $MS_PER_SLICE = 500;
+my $last_ms = 0;
+
+my $output = "";
+my $time = 0;
+my $last_packet_sent = 0;
+
+my @pts;
+
+EVENT: while ( <$gz> ) {
+  chomp;
+
+  my ( $direction, $ms, $event, $field1, $field2 ) = split /\s+/, $_;
+  die "Bad direction $direction" unless $direction eq "downlink";
+  die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
+
+  if ( $event eq "underflow" ) {
+    next EVENT;
+  }
+
+  die "nonmonotonic timestamps" unless $ms >= $last_ms;
+  $last_ms = $ms;
+
+  my $ms_old = $field1;
+
+  while ( $time < $ms ) {
+    my $age = $time - $last_packet_sent;
+    my $secs = $time * 1.e-3;
+    $output .= "$secs $age\n";
+    push @pts, $age;
+    $time++;
+  }
+
+  my $new_last_packet_sent = $ms - $ms_old;
+  die unless ( $new_last_packet_sent >= $last_packet_sent );
+  $last_packet_sent = $new_last_packet_sent;
+}
+
+@pts = sort { $b <=> $a } @pts;
+my $ninefive = $pts[ 0.05 * scalar @pts ];
+
+my $temp_filename = rand() . '-' . $$ . '-' . $svg_name;
+
+open GNUPLOT, '| gnuplot' or die;
+print GNUPLOT <<END;
+set title "Delay"
+set xlabel "time (s)"
+set ylabel "delay (ms)"
+set yrange [75:*]
+set ytics format "% 6.0f"
+set style fill solid 0.4 border
+set logscale y
+set terminal svg size 1024,560 fixed  fname 'Arial'  fsize 12 rounded dashed
+set output "$temp_filename"
+plot "-" using 1:2 with filledcurves above x1 lt 1 lc 3 title "Delay", $ninefive with lines lt 3 lc 1 lw 2.5 title "95th percentile ($ninefive ms)"
+END
+
+print GNUPLOT $output;
+
+close $gz or die "$!";
+close GNUPLOT or die "$!";
+
+rename( $temp_filename, $svg_name ) or die "$!";
+
