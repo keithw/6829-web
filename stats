@@ -15,6 +15,7 @@ my $last_packet_sent = 0;
 my $capacity_sum = 0;
 my $used_sum = 0;
 my @pts;
+my $badstats = 0;
 
 EVENT: while ( <$gz> ) {
   chomp;
@@ -46,9 +47,14 @@ EVENT: while ( <$gz> ) {
   }
 
   my $new_last_packet_sent = $ms - $ms_old;
-  die unless ( $new_last_packet_sent >= $last_packet_sent - 3 );
+  die unless ( $new_last_packet_sent >= $last_packet_sent - 50 );
   # rounding can screw this up a little
-  $last_packet_sent = $new_last_packet_sent if ( $new_last_packet_sent > $last_packet_sent );
+  if ( $new_last_packet_sent > $last_packet_sent )
+  {
+    $last_packet_sent = $new_last_packet_sent
+  } elsif ( $last_packet_sent - $new_last_packet_sent > 5 ) {
+    $badstats = $last_packet_sent - $new_last_packet_sent;
+  }
 }
 
 @pts = sort { $b <=> $a } @pts;
@@ -58,6 +64,10 @@ my $avg_capacity = 1.e-3 * $capacity_sum / $last_packet_sent;
 
 my $temp_filename = rand() . '-' . $$ . '-' . $html_name;
 open TEMP, ">", $temp_filename or die "$!";
+
+if ( $badstats ) {
+  print TEMP "Warning: scheduling delay of $badstats observed. Are you using a medium instance or better?<br>\n";
+}
 
 print TEMP "<table>";
 printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><b>%0.2f</b></td></tr>\n", log( $avg_throughput / $ninefive );
