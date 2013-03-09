@@ -56,9 +56,9 @@ print GNUPLOT <<END;
 set title "Delay"
 set xlabel "time (s)"
 set ylabel "delay (ms)"
-set yrange [75:*]
+set yrange [60:*]
 set ytics format "% 6.0f"
-set style fill solid 0.4 border
+set style fill solid noborder
 set logscale y
 set terminal svg size 1024,560 fixed  fname 'Arial'  fsize 12 rounded dashed
 set output "$temp_filename"
