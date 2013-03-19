@@ -1,0 +1,112 @@
+#!/usr/bin/perl -w
+
+use strict;
+use IO::Uncompress::Gunzip;
+use File::Temp qw{tempdir tempfile};
+use DBI;
+
+# check if we have an entry already
+my $dbh = DBI->connect("DBI:Pg:dbname=829stats", "", "", {'RaiseError' => 1}) or die "$DBI::errstr\n";
+
+my ( $filename ) = @ARGV;
+
+my $query = $dbh->prepare( q{SELECT username, throughput, delay, score, standard_trace FROM results WHERE filename = ?} ) or die "$DBI::errstr\n";
+
+$query->execute( $filename ) or die "$DBI::errstr\n";
+my $already_inserted = 0;
+while ( my $row = $query->fetchrow_hashref ) {
+  $already_inserted = 1;
+}
+
+unless ( $already_inserted ) {
+  my $gz = new IO::Uncompress::Gunzip $filename or die;
+
+  my $last_ms = 0;
+
+  my $time = 0;
+  my $last_packet_sent = 0;
+  my $capacity_sum = 0;
+  my $used_sum = 0;
+  my @pts;
+  my $badstats = 0;
+
+ EVENT: while ( <$gz> ) {
+    chomp;
+
+    my ( $direction, $ms, $event, $field1, $field2 ) = split /\s+/, $_;
+    die "Bad direction $direction" unless $direction eq "downlink";
+    die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
+
+    die "nonmonotonic timestamps" unless $ms >= $last_ms;
+    $last_ms = $ms;
+
+    if ( $event eq "delivery" ) {
+      my $bits = $field2 * 8;
+      $used_sum += $bits;
+      $capacity_sum += $bits;
+    } elsif ( $event eq "underflow" ) {
+      my $bits = $field1 * 8;
+      $capacity_sum += $bits;
+      next EVENT;
+    }
+
+    my $ms_old = $field1;
+
+    while ( $time < $ms ) {
+      my $age = $time - $last_packet_sent;
+      my $secs = $time * 1.e-3;
+      push @pts, $age;
+      $time++;
+    }
+
+    my $new_last_packet_sent = $ms - $ms_old;
+#  die unless ( $new_last_packet_sent >= $last_packet_sent - 50 );
+  # rounding can screw this up a little
+    if ( $new_last_packet_sent > $last_packet_sent )
+      {
+	$last_packet_sent = $new_last_packet_sent
+      } elsif ( $last_packet_sent - $new_last_packet_sent > 10 ) {
+	my $newbad = $last_packet_sent - $new_last_packet_sent;
+	if ( $newbad > $badstats ) { $badstats = $newbad; }
+      }
+  }
+
+  my $standard_trace = 710429360;
+
+  @pts = sort { $b <=> $a } @pts;
+  my $ninefive = $pts[ 0.05 * scalar @pts ];
+  my $avg_throughput = 1.e-3 * $used_sum / $last_packet_sent;
+  my $avg_capacity = 1.e-3 * $capacity_sum / $last_packet_sent;
+
+  my $is_standard_trace = 0;
+  if ( $capacity_sum >= $standard_trace * 0.99 and $capacity_sum <= $standard_trace * 1.01 ) {
+    $is_standard_trace = 1;
+  }
+
+  # insert
+  my $insert = $dbh->prepare( q{INSERT INTO results (username, filename, throughput, delay, score, standard_trace) VALUES (?, ?, ?, ?, ?, ?)} ) or die "$DBI::errstr\n";
+
+  my ( $username ) = $filename =~ m{(.*?)-};
+
+  $insert->execute( $username, $filename, $avg_throughput, $ninefive, log( $avg_throughput / $ninefive ), $is_standard_trace ) or die "$DBI::errstr\n";
+}
+
+# get values and print
+
+my $queryall = $dbh->prepare( q{SELECT username, throughput, delay, score, filename FROM results WHERE standard_trace = TRUE ORDER BY score DESC} ) or die "$DBI::errstr\n";
+$queryall->execute() or die "$DBI::errstr\n";
+print qq{<table><tr><td>Username</td><td>Throughput (Mbps)</td><td>95th percentile delay</td><td>Score</td></tr>\n};
+my %username_hit;
+while ( my $row = $queryall->fetchrow_hashref ) {
+  my $stylestr = "";
+  if ( $row->{ filename } eq $filename ) {
+    $stylestr = " <strong>(this trace)</strong>";
+  } elsif ( $username_hit{ $row->{ username } } ) {
+    next;
+  }
+  printf qq{<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n},
+    $row->{ username } . $stylestr, $row->{ throughput }, $row->{ delay }, $row->{ score };
+  $username_hit{ $row->{ username } } = 1;
+}
+
+print qq{</table>};
