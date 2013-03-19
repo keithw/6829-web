@@ -95,15 +95,25 @@ unless ( $already_inserted ) {
 
 my $queryall = $dbh->prepare( q{SELECT username, throughput, delay, score, filename FROM results WHERE standard_trace = TRUE ORDER BY score DESC} ) or die "$DBI::errstr\n";
 $queryall->execute() or die "$DBI::errstr\n";
-print qq{<table><tr><td>Username</td><td>Throughput (Mbps)</td><td>95th percentile delay</td><td>Score</td></tr>\n};
+print qq{<table><tr><td>Username</td><td>Throughput (Mbps)</td><td>95th percentile delay (ms)</td><td>Score</td></tr>\n};
 my %username_hit;
 while ( my $row = $queryall->fetchrow_hashref ) {
+  if ( $row->{ username } eq "anirudh" and $row->{ score } > -2.41 ) {
+    $row->{ username } = "(omniscient protocol)";
+  }
+
+  if ( $row->{ username } eq "sproutewma" ) {
+    next;
+  }
+
   my $stylestr = "";
+
   if ( $row->{ filename } eq $filename ) {
     $stylestr = " <strong>(this trace)</strong>";
   } elsif ( $username_hit{ $row->{ username } } ) {
     next;
   }
+
   printf qq{<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n},
     $row->{ username } . $stylestr, $row->{ throughput }, $row->{ delay }, $row->{ score };
   $username_hit{ $row->{ username } } = 1;
