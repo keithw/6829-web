@@ -58,6 +58,8 @@ EVENT: while ( <$gz> ) {
   }
 }
 
+my $standard_trace = 710429360;
+
 @pts = sort { $b <=> $a } @pts;
 my $ninefive = $pts[ 0.05 * scalar @pts ];
 my $avg_throughput = 1.e-3 * $used_sum / $last_packet_sent;
@@ -72,6 +74,13 @@ if ( $badstats ) {
 
 print TEMP "<table>";
 printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><b>%0.2f</b></td></tr>\n", log( $avg_throughput / $ninefive );
+
+if ( $capacity_sum == $standard_trace ) {
+  printf TEMP "<tr><td>Skype's score:</td><td></td><td>%0.2f</td></tr>\n", -7.20;
+  printf TEMP "<tr><td>Sprout's score:</td><td></td><td>%0.2f</td></tr>\n", -3.45;
+  printf TEMP "<tr><td>Best possible score:</td><td></td><td>%0.2f</td></tr>\n", -2.31;
+}
+
 print TEMP "<tr><td colspan=3><hr></td></tr>\n";
 
 print TEMP "<tr><td>Delay (95th percentile):</td><td> </td><td><b>$ninefive ms</b></td></tr>\n";
