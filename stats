@@ -73,12 +73,12 @@ if ( $badstats ) {
 }
 
 print TEMP "<table>";
-printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><b>%0.2f</b></td></tr>\n", log( $avg_throughput / $ninefive );
+printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><strong>%0.2f</strong></td></tr>\n", log( $avg_throughput / $ninefive );
 
 if ( $capacity_sum >= $standard_trace * 0.99 and $capacity_sum <= $standard_trace * 1.01 ) {
-  printf TEMP "<tr><td>Skype's score:</td><td></td><td>%0.2f</td></tr>\n", -7.20;
-  printf TEMP "<tr><td>Sprout's score:</td><td></td><td>%0.2f</td></tr>\n", -3.45;
-  printf TEMP "<tr><td>Best possible score:</td><td></td><td>%0.2f</td></tr>\n", -2.31;
+  printf TEMP qq{<tr><td><a href="http://6829.keithw.org/ps2report/?skype-1363038303-eejahcei">Skype's score:</a></td><td></td><td>%0.2f</td></tr>\n}, -7.20;
+  printf TEMP qq{<tr><td><a href="http://6829.keithw.org/ps2report/?sprout-1363685215-aeviphah"Sprout's score:</a></td><td></td><td>%0.2f</td></tr>\n}, -3.45;
+  printf TEMP qq{<tr><td><a href="http://6829.keithw.org/ps2report/?anirudh-1363631382-cheighea">Best possible score:</a></td><td></td><td>%0.2f</td></tr>\n}, -2.31;
 }
 
 print TEMP "<tr><td colspan=3><hr></td></tr>\n";
