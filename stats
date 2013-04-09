@@ -8,14 +8,14 @@ my ( $filename, $html_name ) = @ARGV;
 
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
-my $last_ms = 0;
+my $start_grading_time = 2000;
+my $last_ms = $start_grading_time;
 
 my $time = 0;
 my $last_packet_sent = 0;
 my $capacity_sum = 0;
 my $used_sum = 0;
 my @pts;
-my $badstats = 0;
 
 EVENT: while ( <$gz> ) {
   chomp;
@@ -24,62 +24,50 @@ EVENT: while ( <$gz> ) {
   die "Bad direction $direction" unless $direction eq "downlink";
   die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
 
-  die "nonmonotonic timestamps" unless $ms >= $last_ms;
-  $last_ms = $ms;
+  if ( $ms > $start_grading_time ) { # start grading
+    die "nonmonotonic timestamps" unless $ms >= $last_ms;
+    $last_ms = $ms;
 
-  if ( $event eq "delivery" ) {
-    my $bits = $field2 * 8;
-    $used_sum += $bits;
-    $capacity_sum += $bits;
-  } elsif ( $event eq "underflow" ) {
-    my $bits = $field1 * 8;
-    $capacity_sum += $bits;
-    next EVENT;
-  }
+    if ( $event eq "delivery" ) {
+      my $bits = $field2 * 8;
+      $used_sum += $bits;
+      $capacity_sum += $bits;
 
-  my $ms_old = $field1;
+      my $ms_old = $field1;
 
-  while ( $time < $ms ) {
-    my $age = $time - $last_packet_sent;
-    my $secs = $time * 1.e-3;
-    push @pts, $age;
-    $time++;
-  }
+      while ( $time < $ms ) {
+	my $age = $time - $last_packet_sent;
+	my $secs = $time * 1.e-3;
+	push @pts, $age;
+	$time++;
+      }
 
-  my $new_last_packet_sent = $ms - $ms_old;
-#  die unless ( $new_last_packet_sent >= $last_packet_sent - 50 );
-  # rounding can screw this up a little
-  if ( $new_last_packet_sent > $last_packet_sent )
-  {
-    $last_packet_sent = $new_last_packet_sent
-  } elsif ( $last_packet_sent - $new_last_packet_sent > 10 ) {
-    my $newbad = $last_packet_sent - $new_last_packet_sent;
-    if ( $newbad > $badstats ) { $badstats = $newbad; }
+      my $new_last_packet_sent = $ms - $ms_old;
+      die "Jumbled timestamps" unless ( $new_last_packet_sent >= $last_packet_sent );
+      $last_packet_sent = $new_last_packet_sent;
+    } elsif ( $event eq "underflow" ) {
+      my $bits = $field1 * 8;
+      $capacity_sum += $bits;
+    }
   }
 }
 
-my $standard_trace = 710429360;
+
+my $trace_duration = ($last_ms - $start_grading_time);
 
 @pts = sort { $b <=> $a } @pts;
 my $ninefive = $pts[ 0.05 * scalar @pts ];
-my $avg_throughput = 1.e-3 * $used_sum / $last_packet_sent;
-my $avg_capacity = 1.e-3 * $capacity_sum / $last_packet_sent;
+my $avg_throughput = 1.e-3 * $used_sum / $trace_duration;
+my $avg_capacity = 1.e-3 * $capacity_sum / $trace_duration;
 
 my $temp_filename = rand() . '-' . $$ . '-' . $html_name;
 open TEMP, ">", $temp_filename or die "$!";
 
-if ( $badstats ) {
-  print TEMP "<strong>Warning: scheduling jitter of $badstats ms observed. Did you remember to run <code>./update-git-repos</code>?</strong><br>\n";
-}
-
 print TEMP "<table>";
 printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><strong>%0.2f</strong></td></tr>\n", log( $avg_throughput / $ninefive );
 
-if ( $capacity_sum >= $standard_trace * 0.99 and $capacity_sum <= $standard_trace * 1.01 ) {
-  printf TEMP qq{<tr><td><a href="http://6829.keithw.org/ps2report/?skype-1363038303-eejahcei">Skype's score:</a></td><td></td><td>%0.2f</td></tr>\n}, -7.20;
-  printf TEMP qq{<tr><td><a href="http://6829.keithw.org/ps2report/?sprout-1363685215-aeviphah">Sprout's score:</a></td><td></td><td>%0.2f</td></tr>\n}, -3.45;
-  printf TEMP qq{<tr><td><a href="http://6829.keithw.org/ps2report/?anirudh-1363631382-cheighea">Best possible score:</a></td><td></td><td>%0.2f</td></tr>\n}, -2.31;
-}
+print TEMP "<tr><td>trace capacity sum</td><td></td><td>$capacity_sum</td></tr>";
+print TEMP "<tr><td>trace duration</td><td></td><td>$trace_duration</td></tr>";
 
 print TEMP "<tr><td colspan=3><hr></td></tr>\n";
 
