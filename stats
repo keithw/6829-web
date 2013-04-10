@@ -64,7 +64,7 @@ my $temp_filename = rand() . '-' . $$ . '-' . $html_name;
 open TEMP, ">", $temp_filename or die "$!";
 
 print TEMP "<table>";
-printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><strong>%0.2f</strong></td></tr>\n", log( $avg_throughput / $ninefive );
+printf TEMP "<tr><td>log(throughput/delay) score:</td><td></td><td><strong>%0.8f</strong></td></tr>\n", log( $avg_throughput / $ninefive );
 
 print TEMP "<tr><td>trace capacity sum</td><td></td><td>$capacity_sum</td></tr>";
 print TEMP "<tr><td>trace duration</td><td></td><td>$trace_duration</td></tr>";

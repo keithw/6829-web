@@ -21,15 +21,6 @@ while ( my $row = $query->fetchrow_hashref ) {
 unless ( $already_inserted ) {
   my $gz = new IO::Uncompress::Gunzip $filename or die;
 
-  my $last_ms = 0;
-
-  my $time = 0;
-  my $last_packet_sent = 0;
-  my $capacity_sum = 0;
-  my $used_sum = 0;
-  my @pts;
-  my $badstats = 0;
-
  EVENT: while ( <$gz> ) {
     chomp;
 
@@ -37,46 +28,42 @@ unless ( $already_inserted ) {
     die "Bad direction $direction" unless $direction eq "downlink";
     die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
 
-    die "nonmonotonic timestamps" unless $ms >= $last_ms;
-    $last_ms = $ms;
+    if ( $ms > $start_grading_time ) { # start grading
+      die "nonmonotonic timestamps" unless $ms >= $last_ms;
+      $last_ms = $ms;
 
-    if ( $event eq "delivery" ) {
-      my $bits = $field2 * 8;
-      $used_sum += $bits;
-      $capacity_sum += $bits;
-    } elsif ( $event eq "underflow" ) {
-      my $bits = $field1 * 8;
-      $capacity_sum += $bits;
-      next EVENT;
-    }
+      if ( $event eq "delivery" ) {
+	my $bits = $field2 * 8;
+	$used_sum += $bits;
+	$capacity_sum += $bits;
 
-    my $ms_old = $field1;
+	my $ms_old = $field1;
 
-    while ( $time < $ms ) {
-      my $age = $time - $last_packet_sent;
-      my $secs = $time * 1.e-3;
-      push @pts, $age;
-      $time++;
-    }
+	while ( $time < $ms ) {
+	  my $age = $time - $last_packet_sent;
+	  my $secs = $time * 1.e-3;
+	  push @pts, $age;
+	  $time++;
+	}
 
-    my $new_last_packet_sent = $ms - $ms_old;
-#  die unless ( $new_last_packet_sent >= $last_packet_sent - 50 );
-  # rounding can screw this up a little
-    if ( $new_last_packet_sent > $last_packet_sent )
-      {
-	$last_packet_sent = $new_last_packet_sent
-      } elsif ( $last_packet_sent - $new_last_packet_sent > 10 ) {
-	my $newbad = $last_packet_sent - $new_last_packet_sent;
-	if ( $newbad > $badstats ) { $badstats = $newbad; }
+	my $new_last_packet_sent = $ms - $ms_old;
+	die "Jumbled timestamps" unless ( $new_last_packet_sent >= $last_packet_sent );
+	$last_packet_sent = $new_last_packet_sent;
+      } elsif ( $event eq "underflow" ) {
+	my $bits = $field1 * 8;
+	$capacity_sum += $bits;
       }
+    }
   }
 
-  my $standard_trace = 710429360;
+  my $trace_duration = ($last_ms - $start_grading_time);
 
   @pts = sort { $b <=> $a } @pts;
   my $ninefive = $pts[ 0.05 * scalar @pts ];
-  my $avg_throughput = 1.e-3 * $used_sum / $last_packet_sent;
-  my $avg_capacity = 1.e-3 * $capacity_sum / $last_packet_sent;
+  my $avg_throughput = 1.e-3 * $used_sum / $trace_duration;
+  my $avg_capacity = 1.e-3 * $capacity_sum / $trace_duration;
+
+  my $standard_trace = 1696721632;
 
   my $is_standard_trace = 0;
   if ( $capacity_sum >= $standard_trace * 0.99 and $capacity_sum <= $standard_trace * 1.01 ) {
@@ -98,13 +85,13 @@ $queryall->execute() or die "$DBI::errstr\n";
 print qq{<table><tr><td>Username</td><td>Throughput (Mbps)</td><td>95th percentile delay (ms)</td><td>Score</td></tr>\n};
 my %username_hit;
 while ( my $row = $queryall->fetchrow_hashref ) {
-  if ( $row->{ username } eq "anirudh" and $row->{ score } > -2.41 ) {
-    $row->{ username } = "(omniscient protocol)";
-  }
-
-  if ( $row->{ username } eq "sproutewma" ) {
-    next;
-  }
+#  if ( $row->{ username } eq "anirudh" and $row->{ score } > -2.41 ) {
+#    $row->{ username } = "(omniscient protocol)";
+#  }
+#
+#  if ( $row->{ username } eq "sproutewma" ) {
+#    next;
+#  }
 
   my $stylestr = "";
 
