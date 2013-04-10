@@ -110,8 +110,8 @@ while ( my $row = $queryall->fetchrow_hashref ) {
     next;
   }
 
-  printf qq{<tr><td>%s</td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n},
-    $row->{ username } . $stylestr, $row->{ throughput }, $row->{ delay }, $row->{ score };
+  printf qq{<tr><td><a href="http://http://6829.keithw.org/ps2report/?%s">%s</a></td><td>%.2f</td><td>%.2f</td><td>%.2f</td></tr>\n},
+    $row->{ filename }, $row->{ username } . $stylestr, $row->{ throughput }, $row->{ delay }, $row->{ score };
   $username_hit{ $row->{ username } } = 1;
 }
 
