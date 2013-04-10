@@ -21,6 +21,15 @@ while ( my $row = $query->fetchrow_hashref ) {
 unless ( $already_inserted ) {
   my $gz = new IO::Uncompress::Gunzip $filename or die;
 
+  my $start_grading_time = 2000;
+  my $last_ms = $start_grading_time;
+
+  my $time = 0;
+  my $last_packet_sent = 0;
+  my $capacity_sum = 0;
+  my $used_sum = 0;
+  my @pts;
+
  EVENT: while ( <$gz> ) {
     chomp;
 
