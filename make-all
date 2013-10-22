@@ -1,0 +1,41 @@
+#!/usr/bin/perl -w
+
+if ( scalar @ARGV != 3 ) {
+  print STDERR "Usage: $0 FILENAME OUTPUT DIRECTION\n";
+  exit;
+}
+
+my ( $filename, $name_prefix, $desired_direction ) = @ARGV;
+
+system( "./stats $filename $name_prefix.stats.html $desired_direction" );
+system( "./delay-graph $filename $name_prefix.delay.svg $desired_direction" );
+system( "./capacity-graph $filename $name_prefix.capacity.svg $desired_direction" );
+
+my $stats;
+open STATS, "$name_prefix.stats.html" or die;
+while (<STATS>) {
+      $stats .= $_;
+}
+close STATS or die;
+
+open SUMMARY, ">$name_prefix.html" or die;
+
+print SUMMARY <<HERE;
+<html>
+<head><title>Analysis of trace $filename (direction $desired_direction)</title></head>
+<body>
+<p><h1>Analysis of trace $filename (direction $desired_direction)</h1></p>
+<h2>Stats</h2>
+<p>$stats</p>
+<hr>
+<h2>Throughput</h2>
+<p><img src="$name_prefix.capacity.svg"></p>
+</hr>
+<h2>Self-inflicted delay</h2>
+<p><img src="$name_prefix.delay.svg"></p>
+</hr>
+</body>
+</html>
+HERE
+
+close SUMMARY or die;

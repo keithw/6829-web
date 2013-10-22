@@ -4,7 +4,12 @@ use strict;
 use IO::Uncompress::Gunzip;
 use File::Temp qw{tempdir tempfile};
 
-my ( $filename, $svg_name ) = @ARGV;
+if ( scalar @ARGV != 3 ) {
+  print STDERR "Usage: $0 FILENAME OUTPUT DIRECTION\n";
+  exit;
+}
+
+my ( $filename, $svg_name, $desired_direction ) = @ARGV;
 
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
@@ -20,7 +25,7 @@ EVENT: while ( <$gz> ) {
   chomp;
 
   my ( $direction, $ms, $event, $field1, $field2 ) = split /\s+/, $_;
-  die "Bad direction $direction" unless $direction eq "downlink";
+  next EVENT unless $direction eq $desired_direction;
   die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
 
   if ( $event eq "underflow" ) {
