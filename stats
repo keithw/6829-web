@@ -39,7 +39,7 @@ EVENT: while ( <$gz> ) {
       $used_sum += $bits;
       $capacity_sum += $bits;
 
-      my $ms_old = $field1;
+      my $ms_old = $field1 - $start_grading_time;
 
       while ( $time < $ms ) {
 	my $age = $time - $last_packet_sent;
