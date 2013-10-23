@@ -4,17 +4,17 @@ use strict;
 use IO::Uncompress::Gunzip;
 use File::Temp qw{tempdir tempfile};
 
-if ( scalar @ARGV != 3 ) {
-  print STDERR "Usage: $0 FILENAME OUTPUT DIRECTION\n";
+if ( scalar @ARGV != 4 ) {
+  print STDERR "Usage: $0 FILENAME OUTPUT DIRECTION MILLISECONDS_TO_SKIP\n";
   exit;
 }
 
-my ( $filename, $svg_name, $desired_direction ) = @ARGV;
+my ( $filename, $svg_name, $desired_direction, $start_grading_time ) = @ARGV;
 
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
 my $MS_PER_SLICE = 500;
-my $last_ms = 0;
+my $last_ms = $start_grading_time;
 my $current_slice = 0;
 my $capacity_sum = 0;
 my $used_sum = 0;
@@ -27,6 +27,8 @@ while ( <$gz> ) {
   my ( $direction, $ms, $event, $field1, $field2 ) = split /\s+/, $_;
   next unless $direction eq $desired_direction;
   die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
+
+  next EVENT if $ms <= $start_grading_time;
 
   if ( $event eq "delivery" ) {
     my $bits = $field2 * 8;

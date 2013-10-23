@@ -4,16 +4,15 @@ use strict;
 use IO::Uncompress::Gunzip;
 use File::Temp qw{tempdir tempfile};
 
-if ( scalar @ARGV != 3 ) {
-  print STDERR "Usage: $0 FILENAME OUTPUT DIRECTION\n";
+if ( scalar @ARGV != 4 ) {
+  print STDERR "Usage: $0 FILENAME OUTPUT DIRECTION MILLISECONDS_TO_SKIP\n";
   exit;
 }
 
-my ( $filename, $html_name, $desired_direction ) = @ARGV;
+my ( $filename, $html_name, $desired_direction, $start_grading_time ) = @ARGV;
 
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
-my $start_grading_time = 2000;
 my $last_ms = $start_grading_time;
 
 my $time = 0;
