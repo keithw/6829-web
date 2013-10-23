@@ -28,7 +28,7 @@ while ( <$gz> ) {
   next unless $direction eq $desired_direction;
   die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
 
-  next EVENT if $ms <= $start_grading_time;
+  next if $ms <= $start_grading_time;
 
   if ( $event eq "delivery" ) {
     my $bits = $field2 * 8;
