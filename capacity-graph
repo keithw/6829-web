@@ -14,7 +14,7 @@ my ( $filename, $svg_name, $desired_direction, $start_grading_time ) = @ARGV;
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
 my $MS_PER_SLICE = 500;
-my $last_ms = $start_grading_time;
+my $last_ms = 0;
 my $current_slice = 0;
 my $capacity_sum = 0;
 my $used_sum = 0;

@@ -13,7 +13,7 @@ my ( $filename, $html_name, $desired_direction, $start_grading_time ) = @ARGV;
 
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
-my $last_ms = $start_grading_time;
+my $last_ms = 0;
 
 my $time = 0;
 my $last_packet_sent = 0;
