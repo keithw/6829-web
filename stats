@@ -13,9 +13,9 @@ my ( $filename, $html_name, $desired_direction, $start_grading_time ) = @ARGV;
 
 my $gz = new IO::Uncompress::Gunzip $filename or die;
 
-my $last_ms = 0;
+my $last_ms = $start_grading_time;
 
-my $time = 0;
+my $time = $start_grading_time;
 my $last_packet_sent = 0;
 my $capacity_sum = 0;
 my $used_sum = 0;
@@ -29,7 +29,7 @@ EVENT: while ( <$gz> ) {
   die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
 
   if ( $ms > $start_grading_time ) { # start grading
-    $ms -= $start_grading_time;
+#    $ms -= $start_grading_time;
 
     die "nonmonotonic timestamps" unless $ms >= $last_ms;
     $last_ms = $ms;
@@ -39,7 +39,7 @@ EVENT: while ( <$gz> ) {
       $used_sum += $bits;
       $capacity_sum += $bits;
 
-      my $ms_old = $field1 - $start_grading_time;
+      my $ms_old = $field1;
 
       while ( $time < $ms ) {
 	my $age = $time - $last_packet_sent;

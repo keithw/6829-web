@@ -65,7 +65,7 @@ print GNUPLOT <<END;
 set title "Delay"
 set xlabel "time (s)"
 set ylabel "delay (ms)"
-set yrange [60:*]
+set yrange [20:*]
 set ytics format "% 6.0f"
 set style fill solid noborder
 set logscale y
