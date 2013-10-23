@@ -29,6 +29,8 @@ EVENT: while ( <$gz> ) {
   die "Bad event $event" unless $event eq "underflow" or $event eq "delivery";
 
   if ( $ms > $start_grading_time ) { # start grading
+    $ms -= $start_grading_time;
+
     die "nonmonotonic timestamps" unless $ms >= $last_ms;
     $last_ms = $ms;
 

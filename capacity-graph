@@ -30,6 +30,8 @@ while ( <$gz> ) {
 
   next if $ms <= $start_grading_time;
 
+  $ms -= $start_grading_time;
+
   if ( $event eq "delivery" ) {
     my $bits = $field2 * 8;
     $used_sum += $bits;

@@ -34,6 +34,8 @@ EVENT: while ( <$gz> ) {
 
   next EVENT if $ms <= $start_grading_time;
 
+  $ms -= $start_grading_time;
+
   die "nonmonotonic timestamps" unless $ms >= $last_ms;
   $last_ms = $ms;
 
